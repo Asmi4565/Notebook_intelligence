@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notebook Intelligence System (NIS)</title>
+  
+  <!-- Modern Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- KaTeX LaTeX Math Engine -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  
+  <!-- Mermaid Diagram Engine (v10) -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  
+  <!-- Supabase JS SDK (v2) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Core UI Stylesheet -->
+  <link rel="stylesheet" href="/static/css/style.css?v=20261007_v99">
+</head>
+<body>
+
+  <div class="app-layout">
+    <!-- Left Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <span class="brand-icon">📓</span>
+          <span class="brand-title">Notebook Intelligence</span>
+        </div>
+        <button class="mobile-close-btn" onclick="toggleMobileSidebar()">✕</button>
+      </div>
+
+      <div class="sidebar-nav">
+        <div class="nav-section-label">MAIN VIEWS</div>
+        
+        <button class="tab-btn nav-item active" data-target="view-upload">
+          <span class="nav-icon">📤</span>
+          <span>Upload & Status</span>
+        </button>
+        
+        <button class="tab-btn nav-item" data-target="view-viewer">
+          <span class="nav-icon">📖</span>
+          <span>Notebook Viewer</span>
+        </button>
+        
+        <button class="tab-btn nav-item" data-target="view-folders">
+          <span class="nav-icon">📁</span>
+          <span>Folders</span>
+        </button>
+        
+        <button class="tab-btn nav-item" data-target="view-search">
+          <span class="nav-icon">🔍</span>
+          <span>Search View</span>
+        </button>
+        
+        <button class="tab-btn nav-item" data-target="view-ai">
+          <span class="nav-icon">💡</span>
+          <span>Ask / Quiz</span>
+        </button>
+        
+        <button class="tab-btn nav-item" data-target="view-code">
+          <span class="nav-icon">💻</span>
+          <span>Code Lab</span>
+        </button>
+
+      </div>
+    </aside>
+
+    <!-- Main Content Area Wrapper -->
+    <div class="main-wrapper">
+      <!-- Top Header Navigation Bar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="mobile-menu-btn" onclick="toggleMobileSidebar()">☰</button>
+          <h1 class="view-title" id="viewTitle">Upload & Status</h1>
+        </div>
+        
+        <div class="header-controls">
+          <!-- Theme Toggle -->
+          <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Light/Dark Theme">
+            🌙
+          </button>
+          
+          <!-- Status Badges -->
+          <div class="header-badges">
+            <span id="pageCountBadge" class="badge badge-primary">📄 0 Pages</span>
+            <span id="codeCountBadge" class="badge badge-code" style="display: none;">💻 Code Snippets</span>
+          </div>
+
+          <!-- User Profile & Logout Button -->
+          <div class="user-profile-widget" id="userProfileWidget" style="display: flex; align-items: center; gap: 8px; margin-left: 6px;">
+            <div onclick="openProfileModal()" title="View & Edit Profile" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 4px 8px; border-radius: var(--radius-sm); transition: background 0.15s ease;" onmouseover="this.style.background='var(--input-bg)'" onmouseout="this.style.background='transparent'">
+              <span id="userAvatarBadge" style="width: 32px; height: 32px; border-radius: 50%; background: var(--primary); color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem;">👤</span>
+              <span id="userNameLabel" style="font-weight: 600; font-size: 0.9rem; color: var(--text-main);">My Account</span>
+            </div>
+            <script>
+              (function(){
+                try {
+                  var raw = localStorage.getItem("nis_user");
+                  if (raw) {
+                    var u = JSON.parse(raw);
+                    var n = u.name;
+                    if (!n || n.trim().toLowerCase() === "user" || n.trim().toLowerCase() === "test user") {
+                      if (u.email) {
+                        var parts = u.email.split("@")[0].replace(/[._-]+/g, " ").split(" ");
+                        n = parts.filter(Boolean).map(function(w){ return w.charAt(0).toUpperCase() + w.slice(1); }).join(" ");
+                      }
+                    }
+                    if (n && n.trim()) {
+                      var lbl = document.getElementById("userNameLabel");
+                      if (lbl) lbl.textContent = n;
+                      var av = document.getElementById("userAvatarBadge");
+                      if (av) av.textContent = n.trim().charAt(0).toUpperCase();
+                    }
+                  }
+                } catch(e){}
+              })();
+            </script>
+            <button class="btn btn-secondary btn-sm" onclick="logoutUser()" title="Sign Out">Logout</button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Content Container -->
+      <main class="content-body">
+        
+        <!-- View 1: Upload & Status -->
+        <section id="view-upload" class="view-panel active">
+          <!-- Hero Banner Card -->
+          <div class="hero-card">
+            <div class="hero-content">
+              <h2 class="hero-title">Notebook Intelligence System v2.0</h2>
+              <p class="hero-desc">Digitize handwritten academic & technical notes, run grounded Q&A with page citations, generate active recall quizzes, and execute code in a secure sandbox.</p>
+              <button class="btn btn-hero" onclick="document.getElementById('fileInput').click()">📤 Upload Notes Now</button>
+            </div>
+            <div class="hero-badge-decoration">📓</div>
+          </div>
+
+          <!-- Dashboard Summary Metrics Cards -->
+          <div class="stats-grid">
+            <div class="stat-card" onclick="onStatCardClick('folders')" style="cursor: pointer;" title="View & Organize Folders">
+              <div class="stat-header">
+                <div>
+                  <div class="stat-label">Study Folders</div>
+                  <div class="stat-value" id="statFoldersCount">1</div>
+                </div>
+                <div class="stat-icon-badge gradient-blue">📁</div>
+              </div>
+              <div class="stat-footer">
+                <span class="dot-green">●</span> <span id="statFoldersSub">Organized note collections</span>
+              </div>
+            </div>
+
+            <div class="stat-card" onclick="onStatCardClick('digitized')" style="cursor: pointer;" title="View Digitized Pages Grid">
+              <div class="stat-header">
+                <div>
+                  <div class="stat-label">Digitized Pages</div>
+                  <div class="stat-value" id="statPagesCount">0</div>
+                </div>
+                <div class="stat-icon-badge gradient-emerald">📄</div>
+              </div>
+              <div class="stat-footer">
+                <span class="dot-green">●</span> <span id="statPagesSub">OCR processed pages</span>
+              </div>
+            </div>
+
+            <div class="stat-card" onclick="onStatCardClick('quizzes')" style="cursor: pointer;" title="Open Ask & Quiz Generator">
+              <div class="stat-header">
+                <div>
+                  <div class="stat-label">Quizzes History</div>
+                  <div class="stat-value" id="statQuizCount">0</div>
+                </div>
+                <div class="stat-icon-badge gradient-purple">🎯</div>
+              </div>
+              <div class="stat-footer">
+                <span class="dot-green">●</span> <span id="statQuizSub">Active recall sessions</span>
+              </div>
+            </div>
+
+            <div class="stat-card" onclick="onStatCardClick('code')" style="cursor: pointer;" title="Open Code Sandbox & Editor">
+              <div class="stat-header">
+                <div>
+                  <div class="stat-label">Code Snippets</div>
+                  <div class="stat-value" id="statCodeCount">0</div>
+                </div>
+                <div class="stat-icon-badge gradient-amber">💻</div>
+              </div>
+              <div class="stat-footer">
+                <span class="dot-green">●</span> <span id="statCodeSub">Executable Python snippets</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Drag & Drop Upload Zone -->
+          <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+              <h2 class="card-title">📤 Upload Handwritten Lecture Notes</h2>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn btn-secondary btn-sm" onclick="exportNotebookMarkdown()">📥 Export Markdown</button>
+                <button class="btn btn-secondary btn-sm" onclick="exportQuizAnki()">🎴 Export Anki Flashcards</button>
+                <button class="btn btn-danger btn-sm" onclick="clearCurrentNotebook()">🗑️ Clear</button>
+              </div>
+            </div>
+            
+            <!-- Folder Target Selection Bar -->
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; background: var(--input-bg); padding: 8px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border);">
+              <label for="uploadFolderSelect" style="font-weight: 600; font-size: 0.85rem; color: var(--text);">📁 Target Folder:</label>
+              <select id="uploadFolderSelect" class="search-input" style="padding: 4px 10px; font-size: 0.85rem; max-width: 220px;">
+                <option value="General">General</option>
+              </select>
+              <button class="btn btn-secondary btn-sm" onclick="openModal('newFolderModal')" title="Create Folder">+ New Folder</button>
+            </div>
+
+            <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+              <div class="dropzone-icon">📁</div>
+              <div style="font-weight: 600; font-size: 1.05rem; margin-bottom: 4px;">Drag and drop PDF or note images here</div>
+              <div style="color: var(--text-muted); font-size: 0.85rem;">Supports multi-page PDFs, PNG, JPG, and WEBP</div>
+              <input type="file" id="fileInput" multiple accept=".pdf,.png,.jpg,.jpeg,.webp" style="display: none;" onchange="handleFileUpload(this.files)">
+            </div>
+            
+            <div id="uploadStatusText" style="display: none; margin-top: 12px; font-size: 0.9rem; font-weight: 600; color: var(--primary);"></div>
+          </div>
+
+          <!-- Digitized Pages Grid with Selection & Delete Controls -->
+          <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+              <h2 class="card-title" style="margin-bottom: 0;">📚 Digitized Pages in Current Notebook</h2>
+              
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <label style="font-size: 0.85rem; color: var(--text-muted); display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                  <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this.checked)">
+                  <span>Select All</span>
+                </label>
+                <button id="deleteSelectedBtn" class="btn btn-danger btn-sm" style="display: none;" onclick="deleteSelectedPages()">
+                  🗑️ Delete Selected (<span id="selectedCountText">0</span>)
+                </button>
+              </div>
+            </div>
+
+            <!-- Folder Filter Tabs & Pills -->
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; flex-wrap: wrap;">
+              <div id="folderFilterPills" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                <button class="folder-pill active" data-folder="all" onclick="filterByFolder('all')">📁 All Folders</button>
+              </div>
+              <button class="btn btn-secondary btn-sm" onclick="openModal('newFolderModal')">+ Create Folder</button>
+            </div>
+
+            <!-- Document / PDF Source filter & delete tags -->
+            <div id="documentTagsContainer" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;"></div>
+
+            <div class="thumbnail-grid" id="thumbnailGrid">
+              <!-- Dynamic Thumbnails Rendered Here -->
+            </div>
+          </div>
+        </section>
+
+        <!-- FOLDERS VIEW -->
+        <section id="view-folders" class="view-panel">
+          <div class="glass-card" style="margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+              <div>
+                <h2 style="margin: 0; display: flex; align-items: center; gap: 8px;"><span class="header-icon">📁</span> Study Folders & Note Collections</h2>
+                <p style="color: var(--text-muted); margin: 4px 0 0 0; font-size: 0.9rem;">Organize notes by subject or topic, view them collectively, and export as compiled PDFs.</p>
+              </div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-secondary btn-sm" onclick="exportFolderPdf('all')">📥 Export All Notes as PDF</button>
+                <button class="btn btn-primary btn-sm" onclick="openModal('newFolderModal')">+ Create New Folder</button>
+              </div>
+            </div>
+            
+            <div id="foldersGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-top: 16px;">
+              <!-- Dynamic Folders Rendered Here -->
+            </div>
+          </div>
+        </section>
+
+        <!-- View 2: Notebook Viewer -->
+        <section id="view-viewer" class="view-panel">
+          <!-- Clean, Unified Toolbar for Notebook Viewer -->
+          <div class="card" style="margin-bottom: 16px; padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-md);">
+            <!-- Left: Page Stepper & Folder Filter -->
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+              <div style="display: inline-flex; align-items: center; background: var(--input-bg); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden;">
+                <button class="btn btn-secondary btn-sm" id="prevPageBtn" onclick="navigatePage(-1)" style="border: none; border-radius: 0; padding: 6px 12px;" title="Previous Note (Left Arrow)">◀</button>
+                <span id="pageIndicator" style="padding: 0 12px; font-weight: 700; font-size: 0.88rem; color: var(--primary); white-space: nowrap; user-select: none;">Note 1 of 1</span>
+                <button class="btn btn-secondary btn-sm" id="nextPageBtn" onclick="navigatePage(1)" style="border: none; border-radius: 0; padding: 6px 12px;" title="Next Note (Right Arrow)">▶</button>
+              </div>
+
+              <!-- Filter by Folder -->
+              <div style="display: flex; align-items: center; gap: 6px; background: var(--input-bg); padding: 4px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border);">
+                <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">View:</span>
+                <select id="viewerFolderFilterSelect" onchange="onViewerFolderFilterChange(this.value)" style="border: none; background: transparent; font-size: 0.82rem; font-weight: 600; color: var(--text-main); cursor: pointer; outline: none;">
+                  <option value="all">📁 All Notes</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Right: Action Controls Grouped by Priority -->
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+              <!-- Folder assignment dropdown (instant auto-move on selection) -->
+              <div style="display: flex; align-items: center; gap: 6px; background: var(--input-bg); padding: 4px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border);" title="Move this note to a folder">
+                <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">📁 Folder:</span>
+                <select id="viewerFolderSelect" onchange="autoAssignCurrentPageToFolder(this.value)" style="border: none; background: transparent; font-size: 0.82rem; font-weight: 500; color: var(--text-main); cursor: pointer; outline: none;">
+                  <option value="">Unassigned</option>
+                </select>
+              </div>
+
+              <!-- Export Collective PDF -->
+              <button class="btn btn-primary btn-sm" id="exportViewerPdfBtn" onclick="exportCurrentViewerFolderPdf()" title="Download compiled PDF of notes">
+                📥 Export PDF
+              </button>
+
+              <!-- Save Changes Button -->
+              <button class="btn btn-success btn-sm" id="viewerSaveBtn" onclick="saveCurrentTranscript()" title="Save edits to transcription">
+                💾 Save
+              </button>
+
+              <!-- Secondary Actions Menu -->
+              <div style="position: relative; display: inline-block;">
+                <button class="btn btn-secondary btn-sm" onclick="toggleViewerMoreMenu(event)" title="More options" style="padding: 6px 10px;">
+                  ⚙️ More ▾
+                </button>
+                <div id="viewerMoreMenu" style="display: none; position: absolute; right: 0; top: 110%; background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-sm); box-shadow: 0 10px 25px rgba(0,0,0,0.3); z-index: 100; min-width: 170px; overflow: hidden; padding: 4px 0;">
+                  <button type="button" onclick="reOcrCurrentPage(); toggleViewerMoreMenu();" style="width: 100%; text-align: left; padding: 8px 14px; background: none; border: none; font-size: 0.82rem; color: var(--text-main); cursor: pointer; display: flex; align-items: center; gap: 8px;" onmouseover="this.style.background='var(--input-bg)'" onmouseout="this.style.background='none'">
+                    🔄 Re-run OCR
+                  </button>
+                  <button type="button" onclick="sendCurrentPageToCodeLab(); toggleViewerMoreMenu();" style="width: 100%; text-align: left; padding: 8px 14px; background: none; border: none; font-size: 0.82rem; color: var(--text-main); cursor: pointer; display: flex; align-items: center; gap: 8px;" onmouseover="this.style.background='var(--input-bg)'" onmouseout="this.style.background='none'">
+                    💻 Edit in Code Lab
+                  </button>
+                  <div style="height: 1px; background: var(--border); margin: 4px 0;"></div>
+                  <button type="button" onclick="deleteCurrentPage(); toggleViewerMoreMenu();" style="width: 100%; text-align: left; padding: 8px 14px; background: none; border: none; font-size: 0.82rem; color: #ef4444; cursor: pointer; display: flex; align-items: center; gap: 8px;" onmouseover="this.style.background='rgba(239, 68, 68, 0.1)'" onmouseout="this.style.background='none'">
+                    🗑️ Delete Page
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="viewer-container">
+            <!-- Original Scan Pane -->
+            <div class="viewer-pane">
+              <div class="pane-header">
+                <span style="font-weight: 600; font-size: 0.9rem;">📷 High-Resolution Note Scan</span>
+                <span class="badge badge-primary">150 DPI</span>
+              </div>
+              <div class="pane-body scan-display">
+                <img id="scanImage" src="" alt="Notebook Page Scan">
+              </div>
+            </div>
+
+            <!-- Digitized & Structured Content Pane -->
+            <div class="viewer-pane">
+              <div class="pane-header" style="justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="font-weight: 600; font-size: 0.9rem;">📝 Digitized Content</span>
+                  <span class="badge badge-success" id="diagramDetectedBadge" style="display: none;">📊 Diagram Detected</span>
+                </div>
+                
+                <div class="view-mode-toggle" style="display: flex; gap: 4px; background: var(--input-bg); padding: 3px; border-radius: 6px; border: 1px solid var(--border);">
+                  <button id="toggleRenderViewBtn" class="btn btn-sm btn-secondary active-mode" style="font-size: 0.78rem; padding: 3px 8px;" onclick="setViewerMode('render')">👁️ Rendered Blocks</button>
+                  <button id="toggleEditViewBtn" class="btn btn-sm btn-secondary" style="font-size: 0.78rem; padding: 3px 8px;" onclick="setViewerMode('edit')">✏️ Edit Markdown</button>
+                  <button class="btn btn-sm btn-secondary" style="font-size: 0.78rem; padding: 3px 8px; color: #60a5fa;" onclick="sendCurrentPageToCodeLab()">💻 Edit in Code Lab</button>
+                </div>
+              </div>
+              
+              <div class="pane-body" style="position: relative; overflow-y: auto;">
+                <!-- Rendered View (Text + Mermaid Diagrams) -->
+                <div id="transcriptRenderView" class="transcript-render-view" style="padding: 16px; min-height: 420px; display: block;"></div>
+                
+                <!-- Raw Editor (JSON / Markdown) -->
+                <textarea id="transcriptEditor" class="transcript-editor" style="display: none; height: 100%; min-height: 420px;" placeholder="Transcript markdown will appear here..."></textarea>
+                
+                <!-- Collapsible OCR Debug Info -->
+                <details id="ocrDebugDetails" style="margin: 12px; font-size: 0.8rem; color: var(--text-muted); background: rgba(0,0,0,0.25); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border);">
+                  <summary style="cursor: pointer; font-weight: 600; user-select: none;">🛠️ OCR debug info</summary>
+                  <div id="ocrDebugContent" style="margin-top: 8px; line-height: 1.6;">
+                    <div><strong>Model:</strong> gemini-2.5-flash</div>
+                    <div><strong>Status:</strong> <span style="color: var(--text-muted);">pending</span></div>
+                  </div>
+                </details>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Page Thumbnail Strip for Fast Navigation -->
+          <div class="card" style="margin-top: 14px; padding: 10px 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-weight: 600; font-size: 0.82rem; color: var(--text-muted);">Quick Page Switcher</span>
+              <span id="viewerStripCount" style="font-size: 0.78rem; color: var(--text-muted);"></span>
+            </div>
+            <div id="viewerThumbnailsStrip" style="display: flex; gap: 8px; overflow-x: auto; padding: 4px 0;"></div>
+          </div>
+        </section>
+
+        <!-- View 3: Search View -->
+        <section id="view-search" class="view-panel">
+          <div class="card">
+            <h2 class="card-title">🔍 Full-Text Page-Wise Search</h2>
+            <div class="search-bar">
+              <input type="text" id="searchInput" class="search-input" placeholder="Search keywords, definitions, formulas (e.g. 'Binary Search', 'Big-O', 'Partition')..." onkeydown="if(event.key==='Enter') executeSearch()">
+              <button class="btn" onclick="executeSearch()">Search Notes</button>
+            </div>
+            
+            <div id="searchResults">
+              <div style="color: var(--text-muted);">Enter a search query to inspect matching pages and highlighted context snippets.</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 4: AI Tutor & Quiz -->
+        <section id="view-ai" class="view-panel">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            
+            <!-- Grounded Q&A -->
+            <div class="card" style="margin-bottom: 0; display: flex; flex-direction: column;">
+              <h2 class="card-title">💡 Grounded AI Study Assistant</h2>
+              <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">
+                Answers strictly derived from your notebook with clickable page citations.
+              </div>
+              
+              <div class="chat-container">
+                <div class="chat-messages" id="chatMessages">
+                  <div class="message message-ai">
+                    👋 Hello! Ask me any question regarding your lecture notes. I will cite the exact page sources for every explanation.
+                  </div>
+                </div>
+                
+                <div class="chat-input-bar">
+                  <input type="text" id="chatInput" class="search-input" placeholder="Ask a question about your notes..." onkeydown="if(event.key==='Enter') askQuestion()">
+                  <button class="btn" onclick="askQuestion()">Ask</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Active Recall Quiz Portal -->
+            <div class="card" style="margin-bottom: 0; display: flex; flex-direction: column;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                <h2 class="card-title" style="margin-bottom: 0;">📝 Advanced Active Recall Quiz Portal</h2>
+                <span class="badge badge-purple" id="quizStatusBadge">SRS 6.3 Standard</span>
+              </div>
+              
+              <!-- Quiz Configuration & Scope Selection Controls -->
+              <div style="background: var(--input-bg); padding: 12px 14px; border-radius: var(--radius-md); border: 1px solid var(--border); margin-bottom: 14px;">
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+                  
+                  <!-- Folder Filter Selector -->
+                  <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 160px;">
+                    <label for="quizFolderSelect" style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); white-space: nowrap;">📁 Folder:</label>
+                    <select id="quizFolderSelect" class="search-input" style="padding: 4px 8px; font-size: 0.82rem; width: 100%;" onchange="onQuizFolderChange(this.value)">
+                      <option value="all">📁 All Folders</option>
+                    </select>
+                  </div>
+
+                  <!-- Target Note / Document Selector -->
+                  <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 180px;">
+                    <label for="quizDocSelect" style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); white-space: nowrap;">📄 Note:</label>
+                    <select id="quizDocSelect" class="search-input" style="padding: 4px 8px; font-size: 0.82rem; width: 100%;">
+                      <option value="all">Entire Notebook (All Uploaded Notes)</option>
+                    </select>
+                  </div>
+
+                  <!-- Page Range Inputs -->
+                  <div style="display: flex; align-items: center; gap: 4px;">
+                    <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); white-space: nowrap;">📖 Pages:</label>
+                    <input type="number" id="quizStartPage" class="search-input" style="width: 52px; padding: 4px; font-size: 0.82rem; text-align: center;" placeholder="Start" min="1">
+                    <span style="font-size: 0.8rem; color: var(--text-muted);">-</span>
+                    <input type="number" id="quizEndPage" class="search-input" style="width: 52px; padding: 4px; font-size: 0.82rem; text-align: center;" placeholder="End" min="1">
+                  </div>
+
+                  <!-- Difficulty & Count Selectors -->
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <select id="quizDifficultySelect" class="search-input" style="padding: 4px 8px; font-size: 0.82rem;">
+                      <option value="Intermediate">⚡ Intermediate</option>
+                      <option value="Basic">🌱 Basic Recall</option>
+                      <option value="Advanced">🔥 Advanced</option>
+                    </select>
+
+                    <select id="quizCountSelect" class="search-input" style="padding: 4px 8px; font-size: 0.82rem; width: auto;">
+                      <option value="3">3 Qs</option>
+                      <option value="5">5 Qs</option>
+                      <option value="10">10 Qs</option>
+                    </select>
+
+                    <button class="btn btn-sm" onclick="startQuiz()">🎯 Generate</button>
+                  </div>
+
+                </div>
+              </div>
+
+              <!-- Quiz Container -->
+              <div id="quizContainer" style="max-height: 460px; overflow-y: auto; flex: 1;">
+                <div style="color: var(--text-muted); padding: 30px; text-align: center;">
+                  <div style="font-size: 2rem; margin-bottom: 8px;">🎯</div>
+                  <div style="font-weight: 600; font-size: 0.95rem; color: var(--text-main); margin-bottom: 4px;">Ready to Test Your Active Recall?</div>
+                  <div style="font-size: 0.85rem;">Select your note source above and click <strong>"Generate"</strong> to build a personalized quiz from your uploaded lecture notes.</div>
+                </div>
+              </div>
+              
+              <!-- Footer Controls -->
+              <div style="margin-top: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div id="quizScoreDisplay" style="display: none; font-weight: 700; font-size: 0.95rem;"></div>
+                <button id="submitQuizBtn" class="btn btn-success" style="display: none; margin-left: auto;" onclick="gradeQuiz()">✅ Grade My Answers</button>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- View 5: Code Lab -->
+        <section id="view-code" class="view-panel">
+          <div class="card" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; flex-wrap: wrap; gap: 10px;">
+            <div>
+              <h2 class="card-title" style="margin-bottom: 0;">💻 Handwritten Code Review & Sandbox</h2>
+              <div style="font-size: 0.8rem; color: var(--text-muted);">Isolated subprocess (`python -I`) with 5s timeout & network guardrails</div>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <button class="btn btn-secondary" onclick="clearCodeEditor()" title="Clear code editor">🗑️ Clear Code</button>
+              <button class="btn btn-success" onclick="runCodeInSandbox()">▶️ Run Code in Sandbox</button>
+            </div>
+          </div>
+
+          <div class="code-lab-grid">
+            <!-- Editor Pane -->
+            <div class="viewer-pane">
+              <div class="pane-header">
+                <span style="font-weight: 600; font-size: 0.9rem;">🐍 Python Editor</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <button class="btn btn-secondary btn-sm" onclick="clearCodeEditor()" style="padding: 2px 8px; font-size: 0.75rem;" title="Clear code">🗑️ Clear</button>
+                  <span style="font-size: 0.75rem; color: var(--text-muted);">Pre-populated from code-detected notes</span>
+                </div>
+              </div>
+              <div class="pane-body" style="padding: 0;">
+                <textarea id="codeEditor" class="transcript-editor" style="border: none; border-radius: 0; height: 100%; min-height: 480px;" placeholder="# Enter or review extracted code here..."></textarea>
+              </div>
+            </div>
+
+            <!-- Terminal Output Pane -->
+            <div class="viewer-pane">
+              <div class="pane-header">
+                <span style="font-weight: 600; font-size: 0.9rem;">🖥️ Sandbox Terminal Output</span>
+                <span class="badge badge-code">Security Enforced</span>
+              </div>
+              <div class="pane-body" style="padding: 0;">
+                <pre id="terminalOutput" class="terminal-pane">Click "▶️ Run Code in Sandbox" to execute.</pre>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- Modals -->
+  <!-- 1. New Notebook Modal -->
+  <div id="newNotebookModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-title">📓 Create New Course / Notebook</div>
+      <div class="modal-body">
+        <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 12px;">
+          Organize your notes into separate courses (e.g., "Calculus II", "Operating Systems").
+        </p>
+        <input type="text" id="newNotebookName" class="search-input" style="width: 100%;" placeholder="Course / Notebook Name...">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('newNotebookModal')">Cancel</button>
+        <button class="btn" onclick="createNewNotebook()">Create Notebook</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. New Folder Modal -->
+  <div id="newFolderModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-title">📁 Create New Folder</div>
+      <div class="modal-body">
+        <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 12px;">
+          Create a subfolder to group related notes (e.g. "Assignments", "Exams", "Diagrams").
+        </p>
+        <input type="text" id="newFolderName" class="search-input" style="width: 100%;" placeholder="Folder Name (e.g. Midterm Prep)...">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('newFolderModal')">Cancel</button>
+        <button class="btn" onclick="createNewFolder()">Create Folder</button>
+      </div>
+    </div>
+  </div>
+  <!-- 2. User Profile & Account Settings Modal -->
+  <div id="userProfileModal" class="modal-overlay">
+    <div class="modal-card" style="max-width: 520px; width: 100%; max-height: 90vh; overflow-y: auto;">
+      <div class="modal-title" style="display: flex; align-items: center; justify-content: space-between;">
+        <span>👤 Account Profile & Settings</span>
+        <button onclick="closeModal('userProfileModal')" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);">✕</button>
+      </div>
+      <div class="modal-body" style="display: flex; flex-direction: column; gap: 18px; margin-top: 10px;">
+        <!-- User Info Header -->
+        <div style="display: flex; align-items: center; gap: 14px; padding: 14px; background: var(--input-bg); border-radius: var(--radius-md); border: 1px solid var(--border);">
+          <div id="profileAvatarBadge" style="width: 50px; height: 50px; border-radius: 50%; background: var(--primary); color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.3rem;">👤</div>
+          <div style="flex: 1;">
+            <div id="profileNameDisplay" style="font-weight: 700; font-size: 1.05rem; color: var(--text);">User Name</div>
+            <div id="profileEmailDisplay" style="font-size: 0.85rem; color: var(--text-muted);">user@example.com</div>
+            <div style="margin-top: 4px; display: flex; gap: 6px;">
+              <span class="badge badge-primary" style="font-size: 0.72rem;">🎓 Student Tier</span>
+              <span id="profileMemberSinceBadge" class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; font-size: 0.72rem;">Active</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 1: Account Analytics & Usage Stats -->
+        <div style="border-top: 1px solid var(--border); padding-top: 14px;">
+          <div style="font-weight: 700; font-size: 0.9rem; color: var(--text); margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+            <span>📊 Usage & Activity Metrics</span>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px;">
+            <div style="background: var(--input-bg); padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); text-align: center;">
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Notebooks</div>
+              <div id="profileStatNotebooks" style="font-weight: 700; font-size: 1.15rem; color: var(--primary); margin-top: 2px;">0</div>
+            </div>
+            <div style="background: var(--input-bg); padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); text-align: center;">
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Total Pages</div>
+              <div id="profileStatPages" style="font-weight: 700; font-size: 1.15rem; color: var(--primary); margin-top: 2px;">0</div>
+            </div>
+            <div style="background: var(--input-bg); padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); text-align: center;">
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Folders</div>
+              <div id="profileStatFolders" style="font-weight: 700; font-size: 1.15rem; color: var(--primary); margin-top: 2px;">0</div>
+            </div>
+          </div>
+
+          <!-- Daily Quotas -->
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 4px;">
+                <span style="color: var(--text-muted);">Daily OCR Upload Quota</span>
+                <span id="profileOcrQuotaLabel" style="font-weight: 600;">0 / 50 uploads</span>
+              </div>
+              <div style="height: 6px; background: var(--input-bg); border-radius: 3px; overflow: hidden; border: 1px solid var(--border);">
+                <div id="profileOcrQuotaBar" style="height: 100%; width: 0%; background: var(--primary); border-radius: 3px; transition: width 0.3s ease;"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 4px;">
+                <span style="color: var(--text-muted);">Daily AI Explanation & Quiz Quota</span>
+                <span id="profileAiQuotaLabel" style="font-weight: 600;">0 / 50 requests</span>
+              </div>
+              <div style="height: 6px; background: var(--input-bg); border-radius: 3px; overflow: hidden; border: 1px solid var(--border);">
+                <div id="profileAiQuotaBar" style="height: 100%; width: 0%; background: #10b981; border-radius: 3px; transition: width 0.3s ease;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Study & AI Preferences -->
+        <div style="border-top: 1px solid var(--border); padding-top: 14px;">
+          <div style="font-weight: 700; font-size: 0.9rem; color: var(--text); margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+            <span>⚙️ Study & AI Preferences</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div>
+              <label for="prefDifficulty" style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Default Quiz Difficulty</label>
+              <select id="prefDifficulty" class="search-input" style="width: 100%; padding: 6px 10px; font-size: 0.85rem;" onchange="saveStudyPreferences()">
+                <option value="Beginner">Beginner (Foundational recall & definitions)</option>
+                <option value="Intermediate" selected>Intermediate (Concept application & step synthesis)</option>
+                <option value="Advanced">Advanced (Complex proofs, edge cases & analysis)</option>
+              </select>
+            </div>
+            <div>
+              <label for="prefAiStyle" style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 4px;">AI Response Detail Level</label>
+              <select id="prefAiStyle" class="search-input" style="width: 100%; padding: 6px 10px; font-size: 0.85rem;" onchange="saveStudyPreferences()">
+                <option value="balanced" selected>Standard (Balanced explanation with key points)</option>
+                <option value="concise">Concise (Direct bullet-point summary)</option>
+                <option value="detailed">In-Depth Academic (Comprehensive breakdown + examples)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Update Profile Name -->
+        <div style="border-top: 1px solid var(--border); padding-top: 14px;">
+          <label style="font-size: 0.85rem; font-weight: 600; color: var(--text); display: block; margin-bottom: 6px;">Update Display Name</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="profileNameInput" class="search-input" style="flex: 1;" placeholder="Your Name">
+            <button class="btn btn-sm" onclick="saveProfileName()">Save Name</button>
+          </div>
+        </div>
+
+        <!-- Section 4: Change Password -->
+        <div style="border-top: 1px solid var(--border); padding-top: 14px;">
+          <div style="font-weight: 600; font-size: 0.9rem; color: var(--text); margin-bottom: 8px;">🔒 Change Password</div>
+          <div id="profileAlertMsg" style="display: none; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.82rem; margin-bottom: 10px;"></div>
+          
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div>
+              <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Current Password</label>
+              <input type="password" id="profileCurrentPw" class="search-input" style="width: 100%;" placeholder="••••••••">
+            </div>
+            <div>
+              <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 4px;">New Password</label>
+              <input type="password" id="profileNewPw" class="search-input" style="width: 100%;" placeholder="At least 6 characters">
+            </div>
+            <div>
+              <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Confirm New Password</label>
+              <input type="password" id="profileConfirmPw" class="search-input" style="width: 100%;" placeholder="Re-enter new password">
+            </div>
+            <button class="btn btn-secondary" onclick="saveNewPassword()" style="margin-top: 4px; width: 100%;">Update Password</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <button class="btn btn-danger btn-sm" onclick="logoutUser()">🚪 Sign Out</button>
+        <button class="btn btn-secondary" onclick="closeModal('userProfileModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Core App Controller Script -->
+  <script src="/static/js/app.js?v=20261007_v101"></script>
+</body>
+</html>

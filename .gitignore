@@ -1,0 +1,37 @@
+# Environment variables & secrets
+.env
+
+# Database & Storage
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Python virtual environment & cache
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Uploads & Temporary files
+uploads/
+temp/
+tmp/
+*.tmp
+*.log
+test_out.txt
+scratch/
+debug_*.py
+
+# Node dependencies (if any)
+node_modules/
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+.vercel
+.env*
