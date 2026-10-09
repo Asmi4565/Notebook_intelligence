@@ -103,15 +103,15 @@ FAILED_GEMINI_MODELS: set = set()
 
 # Current active Gemini Flash models in priority order
 PREFERRED_FLASH_MODELS = [
-    "gemini-1.5-flash",
-    "gemini-2.0-flash",
     "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
 ]
 
 
 def get_gemini_model() -> str:
-    """Central getter for GEMINI_MODEL env var or auto-discovered model, defaulting to gemini-1.5-flash."""
+    """Central getter for GEMINI_MODEL env var or auto-discovered model, defaulting to gemini-2.5-flash."""
     global DISCOVERED_GEMINI_MODEL
     if DISCOVERED_GEMINI_MODEL and DISCOVERED_GEMINI_MODEL not in FAILED_GEMINI_MODELS:
         return DISCOVERED_GEMINI_MODEL
@@ -120,7 +120,7 @@ def get_gemini_model() -> str:
     if env_model and env_model not in FAILED_GEMINI_MODELS:
         return env_model
         
-    return "gemini-1.5-flash"
+    return "gemini-2.5-flash"
 
 
 def discover_active_gemini_model(client, failed_model: Optional[str] = None) -> str:
@@ -143,7 +143,7 @@ def discover_active_gemini_model(client, failed_model: Optional[str] = None) -> 
     try:
         models = list(client.models.list())
         catalog_models = set()
-        EXCLUDED_KEYWORDS = ["live", "bidi", "realtime", "preview", "embed", "imagen", "audio", "tts", "stt", "medium", "3.6", "3.1", "3.0"]
+        EXCLUDED_KEYWORDS = ["live", "bidi", "realtime", "embed", "imagen", "audio", "tts", "stt"]
         for m in models:
             m_name = getattr(m, "name", "") or str(m)
             clean_name = m_name.replace("models/", "").strip()
@@ -168,15 +168,15 @@ def discover_active_gemini_model(client, failed_model: Optional[str] = None) -> 
                 print(f"[Gemini Model Auto-Discovery] Selected catalog flash model: '{cm}'")
                 return cm
 
-        # 3. Fallback to gemini-1.5-flash or gemini-2.0-flash
-        fallback = "gemini-1.5-flash" if "gemini-1.5-flash" not in FAILED_GEMINI_MODELS else "gemini-2.0-flash"
+        # 3. Fallback to gemini-2.5-flash or gemini-2.0-flash
+        fallback = "gemini-2.5-flash" if "gemini-2.5-flash" not in FAILED_GEMINI_MODELS else ("gemini-2.0-flash" if "gemini-2.0-flash" not in FAILED_GEMINI_MODELS else "gemini-1.5-flash")
         DISCOVERED_GEMINI_MODEL = fallback
         print(f"[Gemini Model Auto-Discovery] Fallback model selected: '{fallback}'")
         return fallback
 
     except Exception as e:
-        print(f"[Gemini Model Auto-Discovery Warning] Could not list models ({e}), defaulting to gemini-1.5-flash")
-        fallback = "gemini-1.5-flash" if "gemini-1.5-flash" not in FAILED_GEMINI_MODELS else "gemini-2.0-flash"
+        print(f"[Gemini Model Auto-Discovery Warning] Could not list models ({e}), defaulting to gemini-2.5-flash")
+        fallback = "gemini-2.5-flash" if "gemini-2.5-flash" not in FAILED_GEMINI_MODELS else ("gemini-2.0-flash" if "gemini-2.0-flash" not in FAILED_GEMINI_MODELS else "gemini-1.5-flash")
         DISCOVERED_GEMINI_MODEL = fallback
         return fallback
 
